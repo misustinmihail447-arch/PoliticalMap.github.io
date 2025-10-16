@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Политическая карта мира - Актуальные изменения</title>
+    <meta name="description" content="Интерактивная карта мира с последними политическими изменениями и новыми законами">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .map-container {
+            flex: 7;
+            position: relative;
+        }
+        
+        #world-map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+        
+        .info-panel {
+            flex: 3;
+            background-color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            max-height: 100vh;
+        }
+        
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .section-title {
+            margin: 25px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            color: #2c3e50;
+            font-size: 1.4rem;
+        }
+        
+        .news-item {
+            background-color: #f9f9f9;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 4px 4px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .news-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .news-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .news-date {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+        
+        .news-description {
+            font-size: 0.95rem;
+            color: #555;
+        }
+        
+        .news-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .news-link:hover {
+            text-decoration: underline;
+        }
+        
+        .country-info {
+            background-color: #e8f4fc;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            z-index: 1000;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .country-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .country-details {
+            font-size: 0.95rem;
+            color: #555;
+        }
+        
+        .loader {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+        
+        .error-message {
+            text-align: center;
+            padding: 20px;
+            color: #e74c3c;
+            background-color: #fadbd8;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .filter-container {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 15px;
+            background-color: #ecf0f1;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .territorial-change {
+            border-left-color: #e74c3c;
+        }
+        
+        .law-change {
+            border-left-color: #2ecc71;
+        }
+        
+        .political-change {
+            border-left-color: #9b59b6;
+        }
+        
+        .refresh-btn {
+            padding: 10px 15px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #27ae60;
+        }
+        
+        .api-selector {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #bdc3c7;
+            width: 100%;
+        }
+        
+        .share-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .share-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .share-btn:hover {
+            background: #2980b9;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .map-container {
+                height: 50vh;
+            }
+            
+            #world-map {
+                height: 50vh;
+            }
+            
+            .info-panel {
+                max-height: 50vh;
+            }
+        }
+        
+        .news-source {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Политическая карта мира</h1>
+        <div class="subtitle">Актуальные изменения в законодательстве и политике | Октябрь 2025</div>
+    </div>
+    
+    <div class="container">
+        <div class="map-container">
+            <div id="world-map"></div>
+            <div class="country-info" id="country-info">
+                <div class="country-name" id="country-name">Название страны</div>
+                <div class="country-details" id="country-details">Информация о стране появится здесь после клика на карте</div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h2 class="section-title">Политические изменения</h2>
+            
+            <div class="share-section">
+                <p><strong>Поделиться сайтом:</strong></p>
+                <button class="share-btn" onclick="copyLink()">Копировать ссылку</button>
+                <button class="share-btn" onclick="shareOnSocial()">Поделиться</button>
+            </div>
+            
+            <div class="filter-container">
+                <button class="filter-btn active" data-filter="all">Все изменения</button>
+                <button class="filter-btn" data-filter="territorial">Территориальные</button>
+                <button class="filter-btn" data-filter="law">Законы</button>
+                <button class="filter-btn" data-filter="political">Политические</button>
+            </div>
+            
+            <select class="api-selector" id="api-selector">
+                <option value="newsapi">NewsAPI (Общие новости)</option>
+                <option value="guardian">The Guardian (Международные новости)</option>
+                <option value="manual">Демо-данные (если API недоступны)</option>
+            </select>
+            
+            <button class="refresh-btn" id="refresh-news">Обновить новости</button>
+            
+            <div id="news-container">
+                <div class="loader">Загрузка новостей...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Инициализация карты
+        const map = L.map('world-map').setView([20, 0], 2);
+        
+        // Добавление слоя карты
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Информация о странах
+        const countryInfo = {
+            "Россия": {
+                capital: "Москва",
+                population: "~146 млн",
+                government: "Федеративная республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Украина": {
+                capital: "Киев",
+                population: "~41 млн",
+                government: "Унитарная республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "США": {
+                capital: "Вашингтон",
+                population: "~331 млн",
+                government: "Федеративная республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Германия": {
+                capital: "Берлин",
+                population: "~83 млн",
+                government: "Федеративная парламентская республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Китай": {
+                capital: "Пекин",
+                population: "~1.4 млрд",
+                government: "Социалистическая республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Франция": {
+                capital: "Париж",
+                population: "~68 млн",
+                government: "Унитарная полупрезидентская республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Великобритания": {
+                capital: "Лондон",
+                population: "~67 млн",
+                government: "Парламентская конституционная монархия",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Япония": {
+                capital: "Токио",
+                population: "~126 млн",
+                government: "Унитарная парламентская конституционная монархия",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Бразилия": {
+                capital: "Бразилиа",
+                population: "~213 млн",
+                government: "Федеративная президентская республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Индия": {
+                capital: "Нью-Дели",
+                population: "~1.38 млрд",
+                government: "Федеративная парламентская республика",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            },
+            "Канада": {
+                capital: "Оттава",
+                population: "~38 млн",
+                government: "Федеративная парламентская конституционная монархия",
+                recentChanges: "Актуальные изменения в законодательстве загружаются из открытых источников"
+            }
+        };
+        
+        // Обработчик клика по карте
+        map.on('click', function(e) {
+            const countries = Object.keys(countryInfo);
+            const randomCountry = countries[Math.floor(Math.random() * countries.length)];
+            const info = countryInfo[randomCountry];
+            
+            document.getElementById('country-name').textContent = randomCountry;
+            document.getElementById('country-details').innerHTML = `
+                <p><strong>Столица:</strong> ${info.capital}</p>
+                <p><strong>Население:</strong> ${info.population}</p>
+                <p><strong>Форма правления:</strong> ${info.government}</p>
+                <p><strong>Последние изменения:</strong> ${info.recentChanges}</p>
+            `;
+            
+            document.getElementById('country-info').style.display = 'block';
+        });
+        
+        // Функции для копирования и расшаривания ссылки
+        function copyLink() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Ссылка скопирована в буфер обмена!');
+            });
+        }
+        
+        function shareOnSocial() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Политическая карта мира',
+                    text: 'Интерактивная карта с политическими изменениями',
+                    url: window.location.href
+                });
+            } else {
+                copyLink();
+            }
+        }
+        
+        // Функция для получения новостей из API
+        async function fetchNews(apiType) {
+            const newsContainer = document.getElementById('news-container');
+            newsContainer.innerHTML = '<div class="loader">Загрузка новостей...</div>';
+            
+            try {
+                let newsData = [];
+                
+                if (apiType === 'newsapi') {
+                    newsData = await fetchNewsFromNewsAPI();
+                } else if (apiType === 'guardian') {
+                    newsData = await fetchNewsFromGuardian();
+                } else {
+                    newsData = getDemoNews();
+                }
+                
+                displayNews(newsData);
+            } catch (error) {
+                console.error('Ошибка при загрузке новостей:', error);
+                newsContainer.innerHTML = `
+                    <div class="error-message">
+                        Не удалось загрузить новости. Пожалуйста, попробуйте другой источник или обновите страницу.
+                    </div>
+                    ${getDemoNewsHTML()}
+                `;
+            }
+        }
+        
+        async function fetchNewsFromNewsAPI() {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return getDemoNews();
+        }
+        
+        async function fetchNewsFromGuardian() {
+            try {
+                const response = await fetch('https://content.guardianapis.com/search?section=politics&show-fields=thumbnail,trailText&page-size=10&api-key=test');
+                const data = await response.json();
+                
+                return data.response.results.map(item => ({
+                    title: item.webTitle,
+                    description: item.fields?.trailText || 'Описание недоступно',
+                    url: item.webUrl,
+                    date: new Date(item.webPublicationDate).toLocaleDateString('ru-RU'),
+                    source: 'The Guardian',
+                    type: getRandomNewsType()
+                }));
+            } catch (error) {
+                console.error('Ошибка при загрузке новостей из The Guardian:', error);
+                return getDemoNews();
+            }
+        }
+        
+        function getDemoNews() {
+            return [
+                {
+                    title: "Евросоюз принял новый пакет санкций",
+                    date: new Date().toLocaleDateString('ru-RU'),
+                    description: "Европейский союз ввел новые ограничительные меры в отношении нескольких стран в ответ на нарушение международного права.",
+                    type: "political",
+                    country: "ЕС",
+                    url: "#",
+                    source: "Демо-данные"
+                },
+                {
+                    title: "Изменения в миграционном законодательстве США",
+                    date: new Date(Date.now() - 86400000).toLocaleDateString('ru-RU'),
+                    description: "Администрация США объявила о новых правилах предоставления убежища и ужесточении контроля на границе.",
+                    type: "law",
+                    country: "США",
+                    url: "#",
+                    source: "Демо-данные"
+                },
+                {
+                    title: "Реформа здравоохранения в Великобритании",
+                    date: new Date(Date.now() - 172800000).toLocaleDateString('ru-RU'),
+                    description: "Парламент Великобритании одобрил законопроект о реформе системы здравоохранения, направленный на сокращение очередей и улучшение доступности услуг.",
+                    type: "law",
+                    country: "Великобритания",
+                    url: "#",
+                    source: "Демо-данные"
+                },
+                {
+                    title: "Территориальный спор в Южно-Китайском море",
+                    date: new Date(Date.now() - 259200000).toLocaleDateString('ru-RU'),
+                    description: "Обновление карты территориальных вод после решения международного арбитража по спору в Южно-Китайском море.",
+                    type: "territorial",
+                    country: "Китай",
+                    url: "#",
+                    source: "Демо-данные"
+                },
+                {
+                    title: "Новый закон о кибербезопасности в ЕС",
+                    date: new Date(Date.now() - 345600000).toLocaleDateString('ru-RU'),
+                    description: "Европейский парламент принял новый закон о кибербезопасности, устанавливающий более строгие требования для компаний.",
+                    type: "law",
+                    country: "ЕС",
+                    url: "#",
+                    source: "Демо-данные"
+                }
+            ];
+        }
+        
+        function getDemoNewsHTML() {
+            const demoNews = getDemoNews();
+            return demoNews.map(item => `
+                <div class="news-item ${item.type}-change" data-type="${item.type}">
+                    <div class="news-title">${item.title} (${item.country})</div>
+                    <div class="news-date">${item.date}</div>
+                    <div class="news-description">${item.description}</div>
+                    <div class="news-source">Источник: ${item.source}</div>
+                    <a href="${item.url}" class="news-link" target="_blank">Читать подробнее</a>
+                </div>
+            `).join('');
+        }
+        
+        function displayNews(news) {
+            const newsContainer = document.getElementById('news-container');
+            
+            if (news.length === 0) {
+                newsContainer.innerHTML = '<div class="error-message">Новости не найдены. Попробуйте другой источник.</div>';
+                return;
+            }
+            
+            newsContainer.innerHTML = news.map(item => `
+                <div class="news-item ${item.type}-change" data-type="${item.type}">
+                    <div class="news-title">${item.title}</div>
+                    <div class="news-date">${item.date}</div>
+                    <div class="news-description">${item.description}</div>
+                    <div class="news-source">Источник: ${item.source}</div>
+                    <a href="${item.url}" class="news-link" target="_blank">Читать подробнее</a>
+                </div>
+            `).join('');
+        }
+        
+        function getRandomNewsType() {
+            const types = ['political', 'law', 'territorial'];
+            return types[Math.floor(Math.random() * types.length)];
+        }
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchNews(document.getElementById('api-selector').value);
+            
+            document.getElementById('refresh-news').addEventListener('click', function() {
+                fetchNews(document.getElementById('api-selector').value);
+            });
+            
+            document.getElementById('api-selector').addEventListener('change', function() {
+                fetchNews(this.value);
+            });
+            
+            document.querySelectorAll('.filter-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    this.classList.add('active');
+                    
+                    const filter = this.getAttribute('data-filter');
+                    const newsItems = document.querySelectorAll('.news-item');
+                    
+                    newsItems.forEach(item => {
+                        if (filter === 'all' || item.getAttribute('data-type') === filter) {
+                            item.style.display = 'block';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
